@@ -12,21 +12,15 @@ public sealed class ListItemRepository : IRepository<ListItem>
         _context = context;
     }
 
-    public async Task AddAsync(ListItem entity, CancellationToken cancellationToken = default) {
+    public async Task<bool> AddAsync(ListItem entity, CancellationToken cancellationToken = default) {
         await _context.ListItems.AddAsync(entity, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        return await _context.SaveChangesAsync(cancellationToken) > 0;
     }
 
     public async Task<ListItem?> GetAsync(int id, CancellationToken cancellationToken = default) {
-        var item = await _context.ListItems.FindAsync(new object?[] { id }, cancellationToken: cancellationToken);
-
-        if (item is not null) {
-            await _context.Entry(item)
-                .Reference(r => r.Film)
-                .LoadAsync(cancellationToken);
-        }
-
-        return item;
+        return await _context.ListItems
+            .Include(i => i.Film)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
     public async Task<IEnumerable<ListItem>> GetAllAsync(CancellationToken cancellationToken = default) {
@@ -35,20 +29,19 @@ public sealed class ListItemRepository : IRepository<ListItem>
             .ToListAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(ListItem entity, CancellationToken cancellationToken = default) {
+    public async Task<bool> UpdateAsync(ListItem entity, CancellationToken cancellationToken = default) {
         _context.Update(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        return await _context.SaveChangesAsync(cancellationToken) > 0;
     }
 
-    public async Task DeleteAsync(ListItem entity, CancellationToken cancellationToken = default) {
+    public async Task<bool> DeleteAsync(ListItem entity, CancellationToken cancellationToken = default) {
         _context.ListItems.Remove(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        return await _context.SaveChangesAsync(cancellationToken) > 0;
     }
 
-    public async Task DeleteByIdAsync(int id, CancellationToken cancellationToken = default) {
+    public async Task<bool> DeleteByIdAsync(int id, CancellationToken cancellationToken = default) {
         var entity = await _context.ListItems.FindAsync(new object?[] { id }, cancellationToken: cancellationToken);
-        _context.ListItems.Remove(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        return entity is not null && await DeleteAsync(entity, cancellationToken);
     }
 
     public async Task<bool> CheckIfExistsAsync(int id, CancellationToken cancellationToken = default) {

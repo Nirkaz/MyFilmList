@@ -12,9 +12,9 @@ public sealed class FilmRepository : IRepository<Film>
         _context = context;
     }
 
-    public async Task AddAsync(Film entity, CancellationToken cancellationToken = default) {
+    public async Task<bool> AddAsync(Film entity, CancellationToken cancellationToken = default) {
         await _context.Films.AddAsync(entity, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        return await _context.SaveChangesAsync(cancellationToken) > 0;
     }
 
     public async Task<Film?> GetAsync(int id, CancellationToken cancellationToken = default) {
@@ -25,20 +25,19 @@ public sealed class FilmRepository : IRepository<Film>
         return await _context.Films.ToListAsync(cancellationToken);
     }
 
-    public async Task UpdateAsync(Film entity, CancellationToken cancellationToken = default) {
+    public async Task<bool> UpdateAsync(Film entity, CancellationToken cancellationToken = default) {
         _context.Update(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        return await _context.SaveChangesAsync(cancellationToken) > 0;
     }
 
-    public async Task DeleteAsync(Film entity, CancellationToken cancellationToken = default) {
+    public async Task<bool> DeleteAsync(Film entity, CancellationToken cancellationToken = default) {
         _context.Films.Remove(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        return await _context.SaveChangesAsync(cancellationToken) > 0;
     }
 
-    public async Task DeleteByIdAsync(int id, CancellationToken cancellationToken = default) {
+    public async Task<bool> DeleteByIdAsync(int id, CancellationToken cancellationToken = default) {
         var entity = await _context.Films.FindAsync(new object?[] { id }, cancellationToken: cancellationToken);
-        _context.Films.Remove(entity);
-        await _context.SaveChangesAsync(cancellationToken);
+        return entity is not null && await DeleteAsync(entity, cancellationToken);
     }
 
     public async Task<bool> CheckIfExistsAsync(int id, CancellationToken cancellationToken = default) {
