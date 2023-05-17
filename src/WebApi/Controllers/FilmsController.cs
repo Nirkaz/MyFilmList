@@ -20,26 +20,14 @@ public class FilmsController : ControllerBase
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
     public async Task<IActionResult> GetFilmAsync([FromRoute] int id, CancellationToken cancellationToken) {
         var film = await _filmService.GetFilmAsync(id, cancellationToken);
-
-        if (film is null) {
-            _logger.LogWarning("Film with id: {FilmId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        return Ok(film);
+        return film is not null ? Ok(film) : NotFound();
     }
 
     [HttpGet]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
     public async Task<IActionResult> GetAllFilmsAsync(CancellationToken cancellationToken) {
         var films = await _filmService.GetAllFilmsAsync(cancellationToken);
-
-        if (films is null || !films.Any()) {
-            _logger.LogWarning("There wasn't any films in the database.");
-            return NotFound();
-        }
-
-        return Ok(films);
+        return films?.Any() == true ? Ok(films) : NotFound();
     }
 
     [HttpPut("{id:int:min(1)}")]
@@ -50,38 +38,24 @@ public class FilmsController : ControllerBase
             return BadRequest();
         }
 
-        var existsCheck = await _filmService.CheckIfFilmExists(id, cancellationToken);
+        var result = await _filmService.UpdateFilmAsync(film, cancellationToken);
 
-        if (!existsCheck) {
-            _logger.LogWarning("Film with id: {FilmId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        await _filmService.UpdateFilmAsync(film, cancellationToken);
-
-        return NoContent();
+        return result ? NoContent() : NotFound();
     }
 
     [HttpPost]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Post))]
     public async Task<IActionResult> PostFilmAsync([FromBody] Film film, CancellationToken cancellationToken) {
-        await _filmService.AddFilmAsync(film, cancellationToken);
+        var result = await _filmService.AddFilmAsync(film, cancellationToken);
 
-        return CreatedAtAction(nameof(PostFilmAsync), new { id = film.Id }, film);
+        return result ? CreatedAtAction("GetFilm", new { id = film.Id }, film) : BadRequest();
     }
 
     [HttpDelete("{id:int:min(1)}")]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Delete))]
     public async Task<IActionResult> DeleteFilmAsync([FromRoute] int id, CancellationToken cancellationToken) {
-        var existsCheck = await _filmService.CheckIfFilmExists(id, cancellationToken);
-
-        if (!existsCheck) {
-            _logger.LogWarning("Film with id: {FilmId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        await _filmService.DeleteFilmByIdAsync(id, cancellationToken);
-
-        return Ok();
+        var result = await _filmService.DeleteFilmByIdAsync(id, cancellationToken);
+        
+        return result ? Ok() : NotFound();
     }
 }
