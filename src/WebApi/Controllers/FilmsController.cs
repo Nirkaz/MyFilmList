@@ -39,7 +39,6 @@ public class FilmsController : ControllerBase
         }
 
         var result = await _filmService.UpdateFilmAsync(film, cancellationToken);
-
         return result ? NoContent() : NotFound();
     }
 
@@ -47,7 +46,6 @@ public class FilmsController : ControllerBase
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Post))]
     public async Task<IActionResult> PostFilmAsync([FromBody] Film film, CancellationToken cancellationToken) {
         var result = await _filmService.AddFilmAsync(film, cancellationToken);
-
         return result ? CreatedAtAction("GetFilm", new { id = film.Id }, film) : BadRequest();
     }
 
@@ -55,7 +53,6 @@ public class FilmsController : ControllerBase
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Delete))]
     public async Task<IActionResult> DeleteFilmAsync([FromRoute] int id, CancellationToken cancellationToken) {
         var result = await _filmService.DeleteFilmByIdAsync(id, cancellationToken);
-        
         return result ? Ok() : NotFound();
     }
 }

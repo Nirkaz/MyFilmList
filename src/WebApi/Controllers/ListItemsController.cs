@@ -21,53 +21,21 @@ public class ListItemsController : ControllerBase
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
     public async Task<IActionResult> GetListItemAsync([FromRoute] int id, CancellationToken cancellationToken) {
         var item = await _listItemService.GetListItemAsync(id, cancellationToken);
-
-        if (item is null) {
-            _logger.LogWarning("List item with id: {ListItemId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        return Ok(item);
+        return item is not null ? Ok(item) : NotFound();
     }
 
     [HttpGet("All")]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
     public async Task<IActionResult> GetAllListItemsAsync(CancellationToken cancellationToken) {
         var items = await _listItemService.GetAllListItemsAsync(cancellationToken);
-
-        if (items is null || !items.Any()) {
-            _logger.LogWarning("There wasn't any list items in the database.");
-            return NotFound();
-        }
-
-        return Ok(items);
+        return items?.Any() == true ? Ok(items) : NotFound();
     }
 
     [HttpGet("Status")]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
     public async Task<IActionResult> GetListItemsByStatusAsync([FromQuery] ListItemStatus status, CancellationToken cancellationToken) {
-        var items = await _listItemService.GetAllListItemsAsync(cancellationToken);
-
-        if (items is null || !items.Any()) {
-            _logger.LogWarning("There wasn't any list items in the database.");
-            return NotFound();
-        }
-
-        return Ok(items.Where(x => x.ListItemStatus == status)); // ToDo: move filtration out of controller action
-    }
-
-    [HttpPost("Create/FromFilm/{filmId:int:min(1)}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> CreateListItemFromFilmAsync([FromRoute] int filmId, CancellationToken cancellationToken) {
-        var result = await _listItemService.CreateListItemFromFilmAsync(filmId, cancellationToken);
-
-        if (result is null) {
-            _logger.LogWarning("Attempted to create list item from non-existing film.");
-            return NotFound();
-        }
-
-        return Ok(result);
+        var items = await _listItemService.GetListItemsByStatus(status, cancellationToken);
+        return items?.Any() == true ? Ok(items) : NotFound();
     }
 
     [HttpPut("{id:int:min(1)}")]
@@ -78,38 +46,28 @@ public class ListItemsController : ControllerBase
             return BadRequest();
         }
 
-        var existsCheck = await _listItemService.CheckIfListItemExists(id, cancellationToken);
+        var result = await _listItemService.UpdateListItemAsync(item, cancellationToken);
+        return result ? NoContent() : NotFound();
+    }
 
-        if (!existsCheck) {
-            _logger.LogWarning("List item with id: {ListItemId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        await _listItemService.UpdateListItemAsync(item, cancellationToken);
-
-        return NoContent();
+    [HttpPost("Create/FromFilm/{filmId:int:min(1)}")]
+    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Post))]
+    public async Task<IActionResult> CreateListItemFromFilmAsync([FromRoute] int filmId, CancellationToken cancellationToken) {
+        var result = await _listItemService.CreateListItemFromFilmAsync(filmId, cancellationToken);
+        return result is not null ? CreatedAtAction("GetListItem", new { id = result.Id }, result) : BadRequest();
     }
 
     [HttpPost]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Post))]
     public async Task<IActionResult> PostListItemAsync([FromBody] ListItem item, CancellationToken cancellationToken) {
-        await _listItemService.AddListItemAsync(item, cancellationToken);
-
-        return CreatedAtAction(nameof(PostListItemAsync), new { id = item.Id }, item);
+        var result = await _listItemService.AddListItemAsync(item, cancellationToken);
+        return result ? CreatedAtAction("GetListItem", new { id = item.Id }, item) : BadRequest();
     }
 
     [HttpDelete("{id:int:min(1)}")]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Delete))]
     public async Task<IActionResult> DeleteListItemAsync([FromRoute] int id, CancellationToken cancellationToken) {
-        var existsCheck = await _listItemService.CheckIfListItemExists(id, cancellationToken);
-
-        if (!existsCheck) {
-            _logger.LogWarning("List item with id: {ListItemId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        await _listItemService.DeleteListItemByIdAsync(id, cancellationToken);
-
-        return Ok();
+        var result = await _listItemService.DeleteListItemByIdAsync(id, cancellationToken);
+        return result ? Ok() : NotFound();
     }
 }
