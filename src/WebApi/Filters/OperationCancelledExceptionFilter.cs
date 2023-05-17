@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Filters;
 
-public class OperationCancelledExceptionFilter : ExceptionFilterAttribute
+public sealed class OperationCancelledExceptionFilter : ExceptionFilterAttribute
 {
     private readonly ILogger _logger;
 
@@ -13,7 +13,7 @@ public class OperationCancelledExceptionFilter : ExceptionFilterAttribute
 
     public override void OnException(ExceptionContext context) {
         if (context.Exception is OperationCanceledException) {
-            _logger.LogInformation("Request was cancelled");
+            _logger.LogWarning("Request was cancelled");
             context.ExceptionHandled = true;
             context.Result = new StatusCodeResult(400);
         }
