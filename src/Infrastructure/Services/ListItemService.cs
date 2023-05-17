@@ -32,12 +32,8 @@ public class ListItemService : IListItemService
             return null;
         }
 
-        var existsCheck = await _filmRepo.CheckIfExistsAsync(film.Id, cancellationToken);
-
-        if (!existsCheck) {
-            _logger.LogWarning("Film with id: {FilmId} wasn't found in the database.", film.Id);
+        if (!await _filmRepo.CheckIfExistsAsync(film.Id, cancellationToken))
             return null;
-        }
 
         var newItem = new ListItem() {
             Film = film
@@ -52,12 +48,8 @@ public class ListItemService : IListItemService
     }
 
     public async Task<ListItem?> CreateListItemFromFilmAsync(int filmId, CancellationToken cancellationToken = default) {
-        var existsCheck = await _filmRepo.CheckIfExistsAsync(filmId, cancellationToken);
-
-        if (!existsCheck) {
-            _logger.LogWarning("Film with id: {FilmId} wasn't found in the database.", filmId);
+        if (!await _filmRepo.CheckIfExistsAsync(filmId, cancellationToken))
             return null;
-        }
 
         var film = await _filmRepo.GetAsync(filmId, cancellationToken);
 
@@ -102,12 +94,8 @@ public class ListItemService : IListItemService
             return false;
         }
 
-        if (!await CheckIfListItemExists(item.Id, cancellationToken)) {
-            _logger.LogWarning("ListItem with id: {ListItemId} wasn't found in the database.", item.Id);
-            return false;
-        }
-
-        return await _listItemRepo.UpdateAsync(item, cancellationToken);
+        return await CheckIfListItemExists(item.Id, cancellationToken)
+            && await _listItemRepo.UpdateAsync(item, cancellationToken);
     }
 
     public async Task<bool> DeleteListItemAsync(ListItem item, CancellationToken cancellationToken = default) {
@@ -120,14 +108,12 @@ public class ListItemService : IListItemService
     }
 
     public async Task<bool> DeleteListItemByIdAsync(int id, CancellationToken cancellationToken = default) {
-        if (!await CheckIfListItemExists(id, cancellationToken)) {
-            _logger.LogWarning("ListItem with id: {ListItemId} wasn't found in the database.", id);
-            return false;
-        }
-
-        return await _listItemRepo.DeleteByIdAsync(id, cancellationToken);
+        return await CheckIfListItemExists(id, cancellationToken)
+            && await _listItemRepo.DeleteByIdAsync(id, cancellationToken);
     }
 
-    public async Task<bool> CheckIfListItemExists(int id, CancellationToken cancellationToken = default)
-        => await _listItemRepo.CheckIfExistsAsync(id, cancellationToken);
+    public async Task<bool> CheckIfListItemExists(int id, CancellationToken cancellationToken = default) {
+        _logger.LogWarning("ListItem with specified id: {ListItemId} wasn't found in the database.", id);
+        return await _listItemRepo.CheckIfExistsAsync(id, cancellationToken);
+    }
 }

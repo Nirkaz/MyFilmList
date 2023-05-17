@@ -49,12 +49,8 @@ public class FilmService : IFilmService
             return false;
         }
 
-        if (!await CheckIfFilmExists(film.Id, cancellationToken)) {
-            _logger.LogWarning("Film with id: {FilmId} wasn't found in the database.", film.Id);
-            return false;
-        }
-
-        return await _filmRepository.UpdateAsync(film, cancellationToken);
+        return await CheckIfFilmExists(film.Id, cancellationToken)
+            && await _filmRepository.UpdateAsync(film, cancellationToken);
     }
 
     public async Task<bool> DeleteFilmAsync(Film film, CancellationToken cancellationToken = default) {
@@ -67,14 +63,12 @@ public class FilmService : IFilmService
     }
 
     public async Task<bool> DeleteFilmByIdAsync(int id, CancellationToken cancellationToken = default) {
-        if (!await CheckIfFilmExists(id, cancellationToken)) {
-            _logger.LogWarning("Film with id: {FilmId} wasn't found in the database.", id);
-            return false;
-        }
-
-        return await _filmRepository.DeleteByIdAsync(id, cancellationToken);
+        return await CheckIfFilmExists(id, cancellationToken)
+            && await _filmRepository.DeleteByIdAsync(id, cancellationToken);
     }
 
-    public async Task<bool> CheckIfFilmExists(int id, CancellationToken cancellationToken = default)
-        => await _filmRepository.CheckIfExistsAsync(id, cancellationToken);
+    public async Task<bool> CheckIfFilmExists(int id, CancellationToken cancellationToken = default) {
+        _logger.LogWarning("Film with specified id: {FilmId} wasn't found in the database.", id);
+        return await _filmRepository.CheckIfExistsAsync(id, cancellationToken);
+    }
 }
