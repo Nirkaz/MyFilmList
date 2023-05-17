@@ -42,28 +42,19 @@ public class FilmListsController : ControllerBase
         return result ? NoContent() : NotFound();
     }
 
-    [HttpPut("AddItem")]
-    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Put))]
-    public async Task<IActionResult> AddItemToListAsync([FromQuery] int listId, [FromQuery] int itemId, CancellationToken cancellationToken) {
-        if (listId <= 0 ||  itemId <= 0) {
-            _logger.LogWarning("Id's should be more than 0");
-            return BadRequest();
-        }
-
+    [HttpPost("List/{listId:int:min(1)}/Item/{itemId:int:min(1)}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddItemToListAsync([FromRoute] int listId, [FromRoute] int itemId, CancellationToken cancellationToken) {
         var result = await _filmListService.AddItemToListAsync(listId, itemId, cancellationToken);
-        return result ? NoContent() : NotFound();
+        return result ? Ok() : NotFound();
     }
 
-    [HttpPut("RemoveItem")]
-    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Put))]
-    public async Task<IActionResult> RemoveItemFromListAsync([FromQuery] int listId, [FromQuery] int itemId, CancellationToken cancellationToken) {
-        if (listId <= 0 || itemId <= 0) {
-            _logger.LogWarning("Id's should be more than 0");
-            return BadRequest();
-        }
-
+    [HttpDelete("List/{listId:int:min(1)}/Item/{itemId:int:min(1)}")]
+    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Delete))]
+    public async Task<IActionResult> RemoveItemFromListAsync([FromRoute] int listId, [FromRoute] int itemId, CancellationToken cancellationToken) {
         var result = await _filmListService.RemoveItemFromListAsync(listId, itemId, cancellationToken);
-        return result ? NoContent() : NotFound();
+        return result ? Ok() : NotFound();
     }
 
     [HttpPost]
