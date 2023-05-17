@@ -20,26 +20,14 @@ public class FilmListsController : ControllerBase
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
     public async Task<IActionResult> GetFilmListAsync([FromRoute] int id, CancellationToken cancellationToken) {
         var filmList = await _filmListService.GetFilmListAsync(id, cancellationToken);
-
-        if (filmList is null) {
-            _logger.LogWarning("Film list with id: {FilmListId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        return Ok(filmList);
+        return filmList is not null ? Ok(filmList) : NotFound();
     }
 
     [HttpGet]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
     public async Task<IActionResult> GetAllFilmListsAsync(CancellationToken cancellationToken) {
         var filmLists = await _filmListService.GetAllFilmListsAsync(cancellationToken);
-
-        if (filmLists is null || !filmLists.Any()) {
-            _logger.LogWarning("There wasn't any films lists in the database.");
-            return NotFound();
-        }
-
-        return Ok(filmLists);
+        return filmLists?.Any() == true ? Ok(filmLists) : NotFound();
     }
 
     [HttpPut("{id:int:min(1)}")]
@@ -50,50 +38,52 @@ public class FilmListsController : ControllerBase
             return BadRequest();
         }
 
-        var existsCheck = await _filmListService.CheckIfFilmListExists(id, cancellationToken);
+        var result = await _filmListService.UpdateFilmListAsync(filmList, cancellationToken);
+        return result ? NoContent() : NotFound();
+    }
 
-        if (!existsCheck) {
-            _logger.LogWarning("Film list with id: {FilmListId} wasn't found in the database.", id);
-            return NotFound();
+    [HttpPut("AddItem")]
+    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Put))]
+    public async Task<IActionResult> AddItemToListAsync([FromQuery] int listId, [FromQuery] int itemId, CancellationToken cancellationToken) {
+        if (listId <= 0 ||  itemId <= 0) {
+            _logger.LogWarning("Id's should be more than 0");
+            return BadRequest();
         }
 
-        await _filmListService.UpdateFilmListAsync(filmList, cancellationToken);
+        var result = await _filmListService.AddItemToListAsync(listId, itemId, cancellationToken);
+        return result ? NoContent() : NotFound();
+    }
 
-        return NoContent();
+    [HttpPut("RemoveItem")]
+    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Put))]
+    public async Task<IActionResult> RemoveItemFromListAsync([FromQuery] int listId, [FromQuery] int itemId, CancellationToken cancellationToken) {
+        if (listId <= 0 || itemId <= 0) {
+            _logger.LogWarning("Id's should be more than 0");
+            return BadRequest();
+        }
+
+        var result = await _filmListService.RemoveItemFromListAsync(listId, itemId, cancellationToken);
+        return result ? NoContent() : NotFound();
     }
 
     [HttpPost]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Post))]
     public async Task<IActionResult> PostFilmListAsync([FromBody] FilmList filmList, CancellationToken cancellationToken) {
-        await _filmListService.AddFilmListAsync(filmList, cancellationToken);
-
-        return CreatedAtAction(nameof(PostFilmListAsync), new { id = filmList.Id }, filmList);
+        var result = await _filmListService.AddFilmListAsync(filmList, cancellationToken);
+        return result ? CreatedAtAction("GetFilmList", new { id = filmList.Id }, filmList) : BadRequest();
     }
 
-    [HttpPost("AddItem")]
-    public async Task<IActionResult> AddItemToListAsync([FromQuery] int listId, [FromQuery] int itemId, CancellationToken cancellationToken)
-        => await _filmListService.AddItemToListAsync(listId, itemId, cancellationToken) ? Ok() : NotFound();
-
     [HttpPost("CreateEmpty")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Post))]
     public async Task<IActionResult> CreateEmptyListAsync(CancellationToken cancellationToken) {
-        var id = await _filmListService.CreateEmptyListAsync(cancellationToken);
-
-        return Ok(id);
+        var result = await _filmListService.CreateEmptyListAsync(cancellationToken);
+        return result is not null ? CreatedAtAction("GetFilmList", new { id = result.Id }, result) : BadRequest();
     }
 
     [HttpDelete("{id:int:min(1)}")]
     [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Delete))]
     public async Task<IActionResult> DeleteFilmListAsync([FromRoute] int id, CancellationToken cancellationToken) {
-        var existsCheck = await _filmListService.CheckIfFilmListExists(id, cancellationToken);
-
-        if (!existsCheck) {
-            _logger.LogWarning("Film list with id: {FilmListId} wasn't found in the database.", id);
-            return NotFound();
-        }
-
-        await _filmListService.DeleteFilmListByIdAsync(id, cancellationToken);
-
-        return Ok();
+        var result = await _filmListService.DeleteFilmListByIdAsync(id, cancellationToken);
+        return result ? Ok() : NotFound();
     }
 }

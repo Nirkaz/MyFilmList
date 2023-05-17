@@ -1,27 +1,59 @@
 ﻿using Application.Interfaces;
 using Domain.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Services;
 
 public class FilmListService : IFilmListService
 {
-    //private readonly IRepository<Film> _filmRepo;
+    private readonly ILogger<FilmListService> _logger;
     private readonly IRepository<ListItem> _listItemRepo;
     private readonly IRepository<FilmList> _filmListRepo;
 
-    public FilmListService(/*IRepository<Film> filmRepo, */IRepository<ListItem> listItemRepo, IRepository<FilmList> filmListRepo) {
-        //_filmRepo = filmRepo;
+    public FilmListService(ILogger<FilmListService> logger, IRepository<ListItem> listItemRepo, IRepository<FilmList> filmListRepo) {
+        _logger = logger;
         _listItemRepo = listItemRepo;
         _filmListRepo = filmListRepo;
     }
 
-    public async Task AddFilmListAsync(FilmList filmList, CancellationToken cancellationToken = default)
-        => await _filmListRepo.AddAsync(filmList, cancellationToken);
+    public async Task<bool> AddFilmListAsync(FilmList filmList, CancellationToken cancellationToken = default) {
+        if (filmList is null) {
+            _logger.LogWarning("FilmList object is null");
+            return false;
+        }
 
-    public async Task<int> CreateEmptyListAsync(CancellationToken cancellationToken = default) {
+        return await _filmListRepo.AddAsync(filmList, cancellationToken);
+    }
+
+    public async Task<FilmList?> CreateEmptyListAsync(CancellationToken cancellationToken = default) {
         var filmList = new FilmList();
-        await _filmListRepo.AddAsync(filmList, cancellationToken);
-        return filmList.Id;
+
+        if (!await _filmListRepo.AddAsync(filmList, cancellationToken)) {
+            _logger.LogWarning("FilmList wasn't added into the database.");
+            return null;
+        }
+
+        return filmList;
+    }
+
+    public async Task<FilmList?> GetFilmListAsync(int id, CancellationToken cancellationToken = default) {
+        var filmList = await _filmListRepo.GetAsync(id, cancellationToken);
+
+        if (filmList is null) {
+            _logger.LogWarning("FilmList with specified id: {FilmListId} wasn't found in the database.", id);
+        }
+
+        return filmList;
+    }
+
+    public async Task<IEnumerable<FilmList>> GetAllFilmListsAsync(CancellationToken cancellationToken = default) {
+        var filmLists = await _filmListRepo.GetAllAsync(cancellationToken);
+
+        if (filmLists?.Any() != true) {
+            _logger.LogWarning("There wasn't any film lists in the database.");
+        }
+
+        return filmLists;
     }
 
     public async Task<bool> AddItemToListAsync(int listId, int itemId, CancellationToken cancellationToken = default) {
@@ -35,9 +67,7 @@ public class FilmListService : IFilmListService
         if (item is null) return false;
 
         list.Items.Add(item);
-        await _filmListRepo.UpdateAsync(list, cancellationToken);
-
-        return true;
+        return await _filmListRepo.UpdateAsync(list, cancellationToken);
     }
 
     public async Task<bool> RemoveItemFromListAsync(int listId, int itemId, CancellationToken cancellationToken = default) {
@@ -51,26 +81,41 @@ public class FilmListService : IFilmListService
         if (item is null) return false;
 
         list.Items.Remove(item);
-        await _filmListRepo.UpdateAsync(list, cancellationToken);
+        return await _filmListRepo.UpdateAsync(list, cancellationToken);
+    }
 
-        return true;
+    public async Task<bool> UpdateFilmListAsync(FilmList filmList, CancellationToken cancellationToken = default) {
+        if (filmList is null) {
+            _logger.LogWarning("FilmList object is null");
+            return false;
+        }
+
+        if (!await CheckIfFilmListExists(filmList.Id, cancellationToken)) {
+            _logger.LogWarning("FilmList with id: {FilmListId} wasn't found in the database.", filmList.Id);
+            return false;
+        }
+
+        return await _filmListRepo.UpdateAsync(filmList, cancellationToken);
+    }
+
+    public async Task<bool> DeleteFilmListAsync(FilmList filmList, CancellationToken cancellationToken = default) {
+        if (filmList is null) {
+            _logger.LogWarning("FilmList object is null");
+            return false;
+        }
+
+        return await _filmListRepo.DeleteAsync(filmList, cancellationToken);
+    }
+
+    public async Task<bool> DeleteFilmListByIdAsync(int id, CancellationToken cancellationToken = default) {
+        if (!await CheckIfFilmListExists(id, cancellationToken)) {
+            _logger.LogWarning("FilmList with id: {FilmListId} wasn't found in the database.", id);
+            return false;
+        }
+
+        return await _filmListRepo.DeleteByIdAsync(id, cancellationToken);
     }
 
     public async Task<bool> CheckIfFilmListExists(int id, CancellationToken cancellationToken = default)
         => await _filmListRepo.CheckIfExistsAsync(id, cancellationToken);
-
-    public async Task DeleteFilmListAsync(FilmList filmList, CancellationToken cancellationToken = default)
-        => await _filmListRepo.DeleteAsync(filmList, cancellationToken);
-
-    public async Task DeleteFilmListByIdAsync(int id, CancellationToken cancellationToken = default)
-        => await _filmListRepo.DeleteByIdAsync(id, cancellationToken);
-
-    public async Task<IEnumerable<FilmList>> GetAllFilmListsAsync(CancellationToken cancellationToken = default)
-        => await _filmListRepo.GetAllAsync(cancellationToken);
-
-    public async Task<FilmList?> GetFilmListAsync(int id, CancellationToken cancellationToken = default)
-        => await _filmListRepo.GetAsync(id, cancellationToken);
-
-    public async Task UpdateFilmListAsync(FilmList film, CancellationToken cancellationToken = default)
-        => await _filmListRepo.UpdateAsync(film, cancellationToken);
 }
